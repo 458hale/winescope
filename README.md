@@ -56,3 +56,4 @@ See [CLAUDE.md](./CLAUDE.md) for detailed Git workflow and development guideline
 ## License
 
 [UNLICENSED](LICENSE)
+# Test branch protection
