@@ -1,0 +1,30 @@
+name: PR Branch Strategy Check
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-source-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if PR is from dev branch
+        run: |
+          SOURCE_BRANCH="${{ github.head_ref }}"
+          BASE_BRANCH="${{ github.base_ref }}"
+
+          echo "Source branch: $SOURCE_BRANCH"
+          echo "Base branch: $BASE_BRANCH"
+
+          if [ "$BASE_BRANCH" = "main" ] && [ "$SOURCE_BRANCH" != "dev" ]; then
+            echo "❌ Error: Direct PR to main from feature branch is not allowed!"
+            echo "Please create PR to 'dev' branch first, then 'dev' to 'main'."
+            echo ""
+            echo "Correct workflow:"
+            echo "  1. $SOURCE_BRANCH → dev (create PR)"
+            echo "  2. dev → main (after dev PR is merged)"
+            exit 1
+          fi
+
+          echo "✅ Branch strategy is correct!"
