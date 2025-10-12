@@ -1,14 +1,14 @@
 ---
-title: "EARS 요구사항 정의서" 
-author: "458hale" 
-tags: [requirements] 
+title: "EARS 요구사항 정의서"
+author: "458hale"
+tags: [requirements]
 created: 2025-10-12 09:25
 updated: 2025-10-12 09:25
 ---
 
 ## User Story
 
-나는 {역할}로서, {목표}를 하고 싶다.  그 결과 {효익/가치}를 얻을 수 있다.
+나는 {역할}로서, {목표}를 하고 싶다.  그 결과 {효익/가치}를 얻을 수 있다.
 
 ## Acceptance Criteria (EARS)
 

@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 WineScope is a NestJS-based TypeScript application. This is a fresh NestJS starter project using:
+
 - **Framework**: NestJS v10.x (Express platform)
 - **Language**: TypeScript 5.1+
 - **Package Manager**: pnpm
@@ -15,6 +16,7 @@ WineScope is a NestJS-based TypeScript application. This is a fresh NestJS start
 This project uses a **simplified GitHub Flow** strategy with two main branches:
 
 ### Branch Structure
+
 - **`main`**: Production-ready code (stable, deployable)
 - **`dev`**: Development integration branch (active development)
 - **`feature/*`**: Feature branches (branched from `dev`)
@@ -24,6 +26,7 @@ This project uses a **simplified GitHub Flow** strategy with two main branches:
 ### Development Workflow
 
 **Daily development** (always work on `dev` or feature branches):
+
 ```bash
 # Start new work
 git checkout dev
@@ -43,6 +46,7 @@ git push origin dev
 ```
 
 **Production release** (when `dev` is stable):
+
 ```bash
 # Merge dev to main
 git checkout main
@@ -58,6 +62,7 @@ git push --tags
 ```
 
 **Emergency hotfix** (critical production bug):
+
 ```bash
 # Branch from main
 git checkout main
@@ -77,6 +82,7 @@ git push origin dev
 ```
 
 ### Branch Naming Convention
+
 - `feature/descriptive-name`: New features
 - `bugfix/issue-description`: Bug fixes
 - `hotfix/critical-fix`: Emergency production fixes
@@ -87,6 +93,7 @@ git push origin dev
 ## Development Commands
 
 ### Setup and Running
+
 ```bash
 pnpm install                  # Install dependencies
 pnpm run start:dev           # Development mode with watch (most commonly used)
@@ -96,12 +103,14 @@ pnpm run start:prod          # Run production build
 ```
 
 ### Code Quality
+
 ```bash
 pnpm run lint                # Run ESLint with auto-fix
 pnpm run format              # Format code with Prettier
 ```
 
 ### Testing
+
 ```bash
 pnpm run test                # Run unit tests
 pnpm run test:watch          # Run unit tests in watch mode
@@ -113,6 +122,7 @@ pnpm run test:debug          # Debug tests with Node inspector
 ## Architecture
 
 ### NestJS Module Structure
+
 This project follows NestJS's modular architecture with dependency injection:
 
 - **Module** (`@Module` decorator): Organizes related components (controllers, providers, imports)
@@ -121,6 +131,7 @@ This project follows NestJS's modular architecture with dependency injection:
 - **Main bootstrap** (`main.ts`): Application entry point, creates and configures NestJS app
 
 ### Current Structure
+
 ```
 src/
 ├── main.ts              # Bootstrap application (port 3000)
@@ -133,16 +144,20 @@ test/
 ```
 
 ### Adding New Features
+
 When creating new features, follow the NestJS modular pattern:
+
 1. Generate module: `nest g module <name>` or manually create `<name>.module.ts`
 2. Generate controller: `nest g controller <name>` or manually create `<name>.controller.ts`
 3. Generate service: `nest g service <name>` or manually create `<name>.service.ts`
 4. Import feature module into `app.module.ts`
 
 ### Dependency Injection
+
 NestJS uses constructor-based dependency injection. Services are injected into controllers/other services via constructor parameters with proper typing.
 
 Example:
+
 ```typescript
 @Controller()
 export class AppController {
@@ -153,17 +168,20 @@ export class AppController {
 ## Code Style and Quality
 
 ### TypeScript Configuration
+
 - Target: ES2021
 - Decorators enabled (`experimentalDecorators`, `emitDecoratorMetadata`)
 - Relaxed strict mode (`strictNullChecks: false`, `noImplicitAny: false`)
 
 ### ESLint and Prettier
+
 - Single quotes for strings
 - Trailing commas required
 - `@typescript-eslint/no-explicit-any` is disabled (but avoid `any` when possible per CLAUDE.md guidelines)
 - Run `pnpm run lint` before commits to ensure code quality
 
 ### Testing
+
 - **Unit tests**: Place `*.spec.ts` files next to source files in `src/`
 - **E2E tests**: Place `*.e2e-spec.ts` files in `test/` directory
 - **Jest config**: `rootDir: "src"` for unit tests, separate config for E2E
@@ -172,20 +190,86 @@ export class AppController {
 ## Key Conventions
 
 ### Decorators
+
 NestJS heavily uses TypeScript decorators for metadata:
+
 - `@Module()`: Define module with imports, controllers, providers
 - `@Controller(route?)`: Define controller with optional route prefix
 - `@Injectable()`: Mark class as injectable provider
 - `@Get()`, `@Post()`, etc.: Define HTTP method handlers
 
 ### File Naming
+
 - Modules: `*.module.ts`
 - Controllers: `*.controller.ts`
 - Services: `*.service.ts`
+- Interfaces: `*.interface.ts`
 - Unit tests: `*.spec.ts`
 - E2E tests: `*.e2e-spec.ts`
 
+**File naming convention**: Use kebab-case (lowercase with hyphens)
+
+- ✅ `wine-search.service.ts`
+- ✅ `curl-crawler.ts`
+- ❌ `WineSearchService.ts`
+- ❌ `curlCrawler.ts`
+
+### Interface Naming Convention
+
+**DO NOT use `I` prefix for interfaces** (TypeScript/NestJS convention)
+
+TypeScript uses structural typing, not nominal typing like C#/Java. The `I` prefix is unnecessary and goes against TypeScript community standards.
+
+**✅ Recommended (NestJS Style)**:
+
+```typescript
+// Interface - use clear, descriptive nouns
+export interface Crawler {
+  crawl(url: string): Promise<string>;
+}
+
+export interface WineRepository {
+  findByName(name: string): Promise<Wine>;
+}
+
+// Implementation - use descriptive names with context
+export class CurlCrawler implements Crawler {
+  async crawl(url: string): Promise<string> {
+    // implementation
+  }
+}
+
+export class PostgresWineRepository implements WineRepository {
+  async findByName(name: string): Promise<Wine> {
+    // implementation
+  }
+}
+```
+
+**❌ Avoid (C# Style)**:
+
+```typescript
+// Don't use I prefix
+interface ICrawler { ... }
+interface IWineRepository { ... }
+```
+
+**NestJS Official Examples**:
+
+- `OnModuleInit` (not `IOnModuleInit`)
+- `CanActivate` (not `ICanActivate`)
+- `ExceptionFilter` (not `IExceptionFilter`)
+- `NestInterceptor` (not `INestInterceptor`)
+
+**Rationale**:
+
+- TypeScript official style guide discourages Hungarian notation
+- NestJS core codebase consistently avoids `I` prefix
+- Structural typing makes interface/class distinction unnecessary
+- Cleaner, more readable code
+
 ### Build Output
+
 - Compiled JavaScript → `dist/` directory
 - TypeScript declarations included (`declaration: true`)
 - Source maps enabled for debugging
