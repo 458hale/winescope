@@ -1,0 +1,108 @@
+services:
+  # API Service (ARM64 native, communicates with Crawler via REST API)
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: production
+    container_name: winescope-api
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - CRAWLER_SERVICE_URL=http://crawler:3001
+    healthcheck:
+      test: ['CMD', 'node', '-e', "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      crawler:
+        condition: service_healthy
+    networks:
+      - winescope-network
+
+  # Crawler Service (AMD64 with curl-impersonate)
+  crawler:
+    build:
+      context: .
+      dockerfile: apps/crawler/Dockerfile
+      target: production
+      platforms:
+        - linux/amd64
+    container_name: winescope-crawler
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ['CMD', 'sh', '-c', 'curl-chrome --version && node -e "require(\"http\").get(\"http://localhost:3001/crawl/health\", (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"']
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - winescope-network
+
+  # Development service for API (ARM64 native with hot-reload)
+  api-dev:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: builder
+    container_name: winescope-api-dev
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=development
+      - CRAWLER_SERVICE_URL=http://crawler:3001
+    volumes:
+      # Mount source code for hot-reload
+      - ./apps/api/src:/app/apps/api/src:ro
+      - ./apps/api/test:/app/apps/api/test:ro
+      - ./libs:/app/libs:ro
+      # Preserve node_modules from container
+      - /app/node_modules
+    command: pnpm run start:dev api
+    depends_on:
+      crawler:
+        condition: service_healthy
+    networks:
+      - winescope-network
+    profiles:
+      - development
+
+  # Development service for Crawler (AMD64 with hot-reload)
+  crawler-dev:
+    build:
+      context: .
+      dockerfile: apps/crawler/Dockerfile
+      target: builder
+      platforms:
+        - linux/amd64
+    container_name: winescope-crawler-dev
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      - NODE_ENV=development
+    volumes:
+      # Mount source code for hot-reload
+      - ./apps/crawler/src:/app/apps/crawler/src:ro
+      - ./apps/crawler/test:/app/apps/crawler/test:ro
+      - ./libs:/app/libs:ro
+      # Preserve node_modules from container
+      - /app/node_modules
+    command: pnpm run start:dev crawler
+    networks:
+      - winescope-network
+    profiles:
+      - development
+
+networks:
+  winescope-network:
+    driver: bridge
