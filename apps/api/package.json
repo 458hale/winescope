@@ -1,0 +1,17 @@
+{
+  "name": "@winescope/api",
+  "version": "0.0.1",
+  "description": "WineScope API Service",
+  "private": true,
+  "scripts": {
+    "build": "cd ../.. && nest build api",
+    "start": "cd ../.. && nest start api",
+    "start:dev": "cd ../.. && nest start api --watch",
+    "start:debug": "cd ../.. && nest start api --debug --watch",
+    "start:prod": "node ../../dist/apps/api/main",
+    "test": "cd ../.. && jest --selectProjects api",
+    "test:watch": "cd ../.. && jest --watch --selectProjects api",
+    "test:cov": "cd ../.. && jest --coverage --selectProjects api",
+    "test:e2e": "cd ../.. && jest --config ./apps/api/test/jest-e2e.json"
+  }
+}

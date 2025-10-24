@@ -1,0 +1,17 @@
+{
+  "name": "@winescope/crawler",
+  "version": "0.0.1",
+  "description": "WineScope Crawler Service",
+  "private": true,
+  "scripts": {
+    "build": "cd ../.. && nest build crawler",
+    "start": "cd ../.. && nest start crawler",
+    "start:dev": "cd ../.. && nest start crawler --watch",
+    "start:debug": "cd ../.. && nest start crawler --debug --watch",
+    "start:prod": "node ../../dist/apps/crawler/main",
+    "test": "cd ../.. && jest --selectProjects crawler",
+    "test:watch": "cd ../.. && jest --watch --selectProjects crawler",
+    "test:cov": "cd ../.. && jest --coverage --selectProjects crawler",
+    "test:e2e": "cd ../.. && jest --config ./apps/crawler/test/jest-e2e.json"
+  }
+}

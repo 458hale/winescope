@@ -94,6 +94,10 @@ importers:
         specifier: ^8.20.0
         version: 8.46.2(eslint@9.38.0)(typescript@5.9.3)
 
+  apps/api: {}
+
+  apps/crawler: {}
+
 packages:
 
   '@angular-devkit/core@19.2.15':
