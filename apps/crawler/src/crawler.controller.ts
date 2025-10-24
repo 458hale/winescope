@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpCode, HttpStatus, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Get,
+} from '@nestjs/common';
 import { CrawlerService } from './crawler.service';
 import { CrawlRequest, CrawlResponse } from '@winescope/contracts/crawler';
 
@@ -14,7 +21,7 @@ export class CrawlerController {
 
   @Get('health')
   @HttpCode(HttpStatus.OK)
-  async health() {
+  health() {
     return {
       status: 'ok',
       timestamp: new Date(),

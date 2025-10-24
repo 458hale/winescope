@@ -12,4 +12,4 @@ async function bootstrap() {
 
   console.log(`Crawler Service is running on: http://localhost:${port}`);
 }
-bootstrap();
+void bootstrap();
