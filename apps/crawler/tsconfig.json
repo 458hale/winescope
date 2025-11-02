@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/apps/crawler",
+    "baseUrl": ".",
+    "paths": {
+      "@winescope/contracts": ["../../libs/contracts/src"],
+      "@winescope/contracts/*": ["../../libs/contracts/src/*"],
+      "@winescope/common": ["../../libs/common/src"],
+      "@winescope/common/*": ["../../libs/common/src/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*", "../../libs/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
