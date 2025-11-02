@@ -14,9 +14,12 @@ describe('CrawlerController', () => {
     crawlerController = app.get<CrawlerController>(CrawlerController);
   });
 
-  describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(crawlerController.getHello()).toBe('Hello World!');
+  describe('health', () => {
+    it('should return health status', () => {
+      const result = crawlerController.health();
+      expect(result).toHaveProperty('status', 'ok');
+      expect(result).toHaveProperty('service', 'crawler');
+      expect(result).toHaveProperty('timestamp');
     });
   });
 });

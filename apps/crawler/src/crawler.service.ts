@@ -39,13 +39,15 @@ export class CrawlerService implements Crawler {
         duration: Date.now() - startTime,
       };
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error occurred';
       return {
         html: '',
         statusCode: 500,
         headers: {},
         timestamp: new Date(),
         duration: Date.now() - startTime,
-        error: error.message,
+        error: errorMessage,
       };
     }
   }

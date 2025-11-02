@@ -5,19 +5,19 @@
 export class Logger {
   constructor(private readonly context: string) {}
 
-  log(message: string, ...args: any[]) {
+  log(message: string, ...args: unknown[]) {
     console.log(`[${this.context}] ${message}`, ...args);
   }
 
-  error(message: string, trace?: string, ...args: any[]) {
+  error(message: string, trace?: string, ...args: unknown[]) {
     console.error(`[${this.context}] ERROR: ${message}`, trace, ...args);
   }
 
-  warn(message: string, ...args: any[]) {
+  warn(message: string, ...args: unknown[]) {
     console.warn(`[${this.context}] WARN: ${message}`, ...args);
   }
 
-  debug(message: string, ...args: any[]) {
+  debug(message: string, ...args: unknown[]) {
     console.debug(`[${this.context}] DEBUG: ${message}`, ...args);
   }
 }

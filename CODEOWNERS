@@ -1,0 +1,22 @@
+# CODEOWNERS - Repository code ownership rules
+
+# Default owner for everything in the repo
+* @458hale
+
+# Critical configuration files
+/.github/ @458hale
+/package.json @458hale
+/pnpm-lock.yaml @458hale
+/tsconfig*.json @458hale
+/nest-cli.json @458hale
+/.eslintrc.js @458hale
+
+# Source code
+/src/ @458hale
+
+# Tests
+/test/ @458hale
+
+# Documentation
+/CLAUDE.md @458hale
+/README.md @458hale
