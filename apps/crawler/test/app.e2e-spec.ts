@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { CrawlerModule } from './../src/crawler.module';
 
 describe('CrawlerController (e2e)', () => {
@@ -15,10 +15,13 @@ describe('CrawlerController (e2e)', () => {
     await app.init();
   });
 
-  it('/ (GET)', () => {
-    return request(app.getHttpServer())
-      .get('/')
-      .expect(200)
-      .expect('Hello World!');
+  it('/crawl/health (GET)', async () => {
+    const server = app.getHttpServer() as never;
+    const response = await request(server).get('/crawl/health');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('status', 'ok');
+    expect(response.body).toHaveProperty('service', 'crawler');
+    expect(response.body).toHaveProperty('timestamp');
   });
 });
