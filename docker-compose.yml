@@ -103,6 +103,36 @@ services:
     profiles:
       - development
 
+  # Debug service for API (ARM64 native with debugger support)
+  api-debug:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: debug
+    container_name: winescope-api-debug
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+      - '9229:9229' # Node.js debugger port
+    environment:
+      - NODE_ENV=development
+      - CRAWLER_SERVICE_URL=http://crawler:3001
+    volumes:
+      # Mount source code for hot-reload and debugging
+      - ./apps/api/src:/app/apps/api/src:ro
+      - ./apps/api/test:/app/apps/api/test:ro
+      - ./libs:/app/libs:ro
+      # Preserve node_modules from container
+      - /app/node_modules
+    command: pnpm run start:debug api
+    depends_on:
+      crawler:
+        condition: service_healthy
+    networks:
+      - winescope-network
+    profiles:
+      - debug
+
 networks:
   winescope-network:
     driver: bridge

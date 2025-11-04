@@ -47,7 +47,32 @@ COPY . .
 RUN pnpm run build api
 
 # ==============================================================================
-# Stage 3: Production - Final lightweight image
+# Stage 3: Debug - Development image with debugger support
+# ==============================================================================
+FROM node:22-alpine AS debug
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@10.18.2 --activate
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source code (will be overridden by volume mount in docker-compose.yml)
+COPY . .
+
+# Expose application port and debugger port
+EXPOSE 3000 9229
+
+# Set development environment
+ENV NODE_ENV=development
+
+# Start the application in debug mode
+CMD ["pnpm", "run", "start:debug", "api"]
+
+# ==============================================================================
+# Stage 4: Production - Final lightweight image
 # ==============================================================================
 FROM node:22-alpine AS production
 

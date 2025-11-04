@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode.vscode-typescript-next",
+    "ms-azuretools.vscode-docker",
+    "firsttris.vscode-jest-runner",
+    "usernamehw.errorlens",
+    "christian-kohler.path-intellisense",
+    "visualstudioexptteam.vscodeintellicode",
+    "eamodio.gitlens"
+  ],
+  "unwantedRecommendations": []
+}
