@@ -58,9 +58,6 @@ RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
 WORKDIR /app/apps/crawler
 RUN pnpm exec nest build
 
-# Create symlink for dev mode compatibility (webpack outputs to ./dist, but NestJS expects ../../dist/apps/crawler)
-RUN mkdir -p /app/dist/apps && ln -sf /app/apps/crawler/dist /app/dist/apps/crawler
-
 # Set entrypoint for development mode
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint-dev.sh"]
 
