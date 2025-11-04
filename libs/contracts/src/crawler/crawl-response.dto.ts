@@ -6,28 +6,28 @@ export class CrawlResponse {
   /**
    * HTML content retrieved from the URL
    */
-  html: string;
+  html!: string;
 
   /**
    * HTTP status code
    * @example 200, 403, 404
    */
-  statusCode: number;
+  statusCode!: number;
 
   /**
    * Response headers
    */
-  headers: Record<string, string>;
+  headers!: Record<string, string>;
 
   /**
    * Timestamp when the crawl was performed
    */
-  timestamp: Date;
+  timestamp!: Date;
 
   /**
    * Time taken to complete the request in milliseconds
    */
-  duration: number;
+  duration!: number;
 
   /**
    * Error message if crawl failed
