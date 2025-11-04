@@ -71,7 +71,7 @@ services:
       - ./libs:/app/libs:ro
       # Preserve node_modules from container
       - /app/node_modules
-    command: sh -c "mkdir -p /app/dist/apps && ln -sf /app/apps/api/dist /app/dist/apps/api && cd /app/apps/api && pnpm run start:dev"
+    command: sh -c "cd /app/apps/api && pnpm run start:dev"
     depends_on:
       crawler-dev:
         condition: service_started
@@ -101,7 +101,7 @@ services:
       - ./libs:/app/libs:ro
       # Preserve node_modules from container
       - /app/node_modules
-    command: sh -c "mkdir -p /app/dist/apps && ln -sf /app/apps/crawler/dist /app/dist/apps/crawler && cd /app/apps/crawler && pnpm run start:dev"
+    command: sh -c "cd /app/apps/crawler && pnpm run start:dev"
     networks:
       - winescope-network
     profiles:
@@ -128,7 +128,7 @@ services:
       - ./libs:/app/libs:ro
       # Preserve node_modules from container
       - /app/node_modules
-    command: sh -c "mkdir -p /app/dist/apps && ln -sf /app/apps/api/dist /app/dist/apps/api && cd /app/apps/api && pnpm run start:debug"
+    command: sh -c "cd /app/apps/api && pnpm run start:debug"
     depends_on:
       crawler-dev:
         condition: service_started

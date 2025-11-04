@@ -47,12 +47,19 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source code
 COPY . .
 
+# Copy entrypoint script for development
+COPY docker-entrypoint-dev.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
+
 # Build the API application using pnpm filter
 WORKDIR /app/apps/api
 RUN pnpm exec nest build
 
 # Create symlink for dev mode compatibility (webpack outputs to ./dist, but NestJS expects ../../dist/apps/api)
 RUN mkdir -p /app/dist/apps && ln -sf /app/apps/api/dist /app/dist/apps/api
+
+# Set entrypoint for development mode
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-dev.sh"]
 
 # ==============================================================================
 # Stage 3: Debug - Development image with debugger support
@@ -70,14 +77,21 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source code (will be overridden by volume mount in docker-compose.yml)
 COPY . .
 
+# Copy entrypoint script
+COPY docker-entrypoint-dev.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
+
 # Expose application port and debugger port
 EXPOSE 3000 9229
 
 # Set development environment
 ENV NODE_ENV=development
 
+# Set entrypoint to create symlinks before starting
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-dev.sh"]
+
 # Start the application in debug mode
-CMD ["pnpm", "--filter", "@winescope/api", "run", "start:debug"]
+CMD ["sh", "-c", "cd /app/apps/api && pnpm run start:debug"]
 
 # ==============================================================================
 # Stage 4: Production - Final lightweight image
