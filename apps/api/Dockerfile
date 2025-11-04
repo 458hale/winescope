@@ -21,8 +21,12 @@ RUN corepack enable && corepack prepare pnpm@10.18.2 --activate
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace configuration
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy all package.json files for workspace apps
+COPY apps/api/package.json ./apps/api/
+COPY apps/crawler/package.json ./apps/crawler/
 
 # Install dependencies (including devDependencies for build)
 RUN pnpm install --frozen-lockfile
@@ -43,8 +47,12 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source code
 COPY . .
 
-# Build the API application
-RUN pnpm run build api
+# Build the API application using pnpm filter
+WORKDIR /app/apps/api
+RUN pnpm exec nest build
+
+# Create symlink for dev mode compatibility (webpack outputs to ./dist, but NestJS expects ../../dist/apps/api)
+RUN mkdir -p /app/dist/apps && ln -sf /app/apps/api/dist /app/dist/apps/api
 
 # ==============================================================================
 # Stage 3: Debug - Development image with debugger support
@@ -69,7 +77,7 @@ EXPOSE 3000 9229
 ENV NODE_ENV=development
 
 # Start the application in debug mode
-CMD ["pnpm", "run", "start:debug", "api"]
+CMD ["pnpm", "--filter", "@winescope/api", "run", "start:debug"]
 
 # ==============================================================================
 # Stage 4: Production - Final lightweight image
@@ -85,15 +93,19 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace configuration
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy all package.json files for workspace apps
+COPY apps/api/package.json ./apps/api/
+COPY apps/crawler/package.json ./apps/crawler/
 
 # Install production dependencies only
 RUN pnpm install --prod --frozen-lockfile && \
     pnpm store prune
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./dist
 
 # Switch to non-root user
 USER nestjs
@@ -109,4 +121,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start the application
-CMD ["node", "dist/apps/api/main.js"]
+CMD ["node", "dist/main.js"]

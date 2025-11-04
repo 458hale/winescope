@@ -292,6 +292,7 @@ curl -X POST http://localhost:3001/crawl \
 4. **production**: 최종 경량 이미지 (Node.js 22 Alpine)
 
 **특징**:
+
 - ARM64 네이티브 실행 (Apple Silicon 최적화)
 - curl-impersonate 미포함 (경량화)
 - 빠른 빌드 및 실행 속도
@@ -307,6 +308,7 @@ curl -X POST http://localhost:3001/crawl \
 4. **production**: 최종 이미지 + curl-impersonate (AMD64)
 
 **특징**:
+
 - 모든 stage에서 `--platform=linux/amd64` 명시
 - curl-impersonate 완전 호환
 - Apple Silicon에서 Rosetta 2 사용 (약간의 성능 오버헤드)
@@ -506,6 +508,7 @@ LOG_LEVEL=debug
 ## 참고 자료
 
 ### 공식 문서
+
 - [NestJS Monorepo 공식 가이드](https://docs.nestjs.com/cli/monorepo)
 - [NestJS Docker 공식 가이드](https://docs.nestjs.com/deployment)
 - [curl-impersonate GitHub](https://github.com/lwthiker/curl-impersonate)
@@ -513,6 +516,7 @@ LOG_LEVEL=debug
 - [VSCode 디버깅 가이드](https://code.visualstudio.com/docs/editor/debugging)
 
 ### 프로젝트 문서
+
 - [Docker 로컬 개발 환경 완전 가이드](documents/docker-local-development-guide.md) - **디버깅 완전 가이드**
 - [WineScope PRD](documents/winescope-prd.md) - 프로젝트 요구사항 문서
 - [CLAUDE.md](CLAUDE.md) - 프로젝트 개요 및 개발 가이드
