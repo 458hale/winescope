@@ -23,6 +23,8 @@ services:
         condition: service_healthy
     networks:
       - winescope-network
+    profiles:
+      - production
 
   # Crawler Service (AMD64 with curl-impersonate)
   crawler:
@@ -46,6 +48,8 @@ services:
       start_period: 10s
     networks:
       - winescope-network
+    profiles:
+      - production
 
   # Development service for API (ARM64 native with hot-reload)
   api-dev:
@@ -59,7 +63,7 @@ services:
       - '3000:3000'
     environment:
       - NODE_ENV=development
-      - CRAWLER_SERVICE_URL=http://crawler:3001
+      - CRAWLER_SERVICE_URL=http://crawler-dev:3001
     volumes:
       # Mount source code for hot-reload
       - ./apps/api/src:/app/apps/api/src:ro
@@ -67,10 +71,10 @@ services:
       - ./libs:/app/libs:ro
       # Preserve node_modules from container
       - /app/node_modules
-    command: pnpm run start:dev api
+    command: sh -c "cd /app/apps/api && pnpm run start:dev"
     depends_on:
-      crawler:
-        condition: service_healthy
+      crawler-dev:
+        condition: service_started
     networks:
       - winescope-network
     profiles:
@@ -97,11 +101,41 @@ services:
       - ./libs:/app/libs:ro
       # Preserve node_modules from container
       - /app/node_modules
-    command: pnpm run start:dev crawler
+    command: sh -c "cd /app/apps/crawler && pnpm run start:dev"
     networks:
       - winescope-network
     profiles:
       - development
+
+  # Debug service for API (ARM64 native with debugger support)
+  api-debug:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: debug
+    container_name: winescope-api-debug
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+      - '9229:9229' # Node.js debugger port
+    environment:
+      - NODE_ENV=development
+      - CRAWLER_SERVICE_URL=http://crawler-dev:3001
+    volumes:
+      # Mount source code for hot-reload and debugging
+      - ./apps/api/src:/app/apps/api/src:ro
+      - ./apps/api/test:/app/apps/api/test:ro
+      - ./libs:/app/libs:ro
+      # Preserve node_modules from container
+      - /app/node_modules
+    command: sh -c "cd /app/apps/api && pnpm run start:debug"
+    depends_on:
+      crawler-dev:
+        condition: service_started
+    networks:
+      - winescope-network
+    profiles:
+      - debug
 
 networks:
   winescope-network:

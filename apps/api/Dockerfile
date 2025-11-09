@@ -21,8 +21,12 @@ RUN corepack enable && corepack prepare pnpm@10.18.2 --activate
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace configuration
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy all package.json files for workspace apps
+COPY apps/api/package.json ./apps/api/
+COPY apps/crawler/package.json ./apps/crawler/
 
 # Install dependencies (including devDependencies for build)
 RUN pnpm install --frozen-lockfile
@@ -43,11 +47,51 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source code
 COPY . .
 
-# Build the API application
-RUN pnpm run build api
+# Copy entrypoint script for development
+COPY docker-entrypoint-dev.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
+
+# Build the API application using pnpm filter
+WORKDIR /app/apps/api
+RUN pnpm exec nest build
+
+# Set entrypoint for development mode
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-dev.sh"]
 
 # ==============================================================================
-# Stage 3: Production - Final lightweight image
+# Stage 3: Debug - Development image with debugger support
+# ==============================================================================
+FROM node:22-alpine AS debug
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@10.18.2 --activate
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copy source code (will be overridden by volume mount in docker-compose.yml)
+COPY . .
+
+# Copy entrypoint script
+COPY docker-entrypoint-dev.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
+
+# Expose application port and debugger port
+EXPOSE 3000 9229
+
+# Set development environment
+ENV NODE_ENV=development
+
+# Set entrypoint to create symlinks before starting
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-dev.sh"]
+
+# Start the application in debug mode
+CMD ["sh", "-c", "cd /app/apps/api && pnpm run start:debug"]
+
+# ==============================================================================
+# Stage 4: Production - Final lightweight image
 # ==============================================================================
 FROM node:22-alpine AS production
 
@@ -60,15 +104,19 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace configuration
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy all package.json files for workspace apps
+COPY apps/api/package.json ./apps/api/
+COPY apps/crawler/package.json ./apps/crawler/
 
 # Install production dependencies only
 RUN pnpm install --prod --frozen-lockfile && \
     pnpm store prune
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api/dist ./dist
 
 # Switch to non-root user
 USER nestjs
@@ -84,4 +132,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node -e "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start the application
-CMD ["node", "dist/apps/api/main.js"]
+CMD ["node", "dist/main.js"]

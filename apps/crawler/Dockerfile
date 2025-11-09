@@ -24,8 +24,12 @@ RUN corepack enable && corepack prepare pnpm@10.18.2 --activate
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace configuration
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy all package.json files for workspace apps
+COPY apps/api/package.json ./apps/api/
+COPY apps/crawler/package.json ./apps/crawler/
 
 # Install dependencies (including devDependencies for build)
 RUN pnpm install --frozen-lockfile
@@ -46,8 +50,16 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source code
 COPY . .
 
-# Build the Crawler application
-RUN pnpm run build crawler
+# Copy entrypoint script for development
+COPY docker-entrypoint-dev.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint-dev.sh
+
+# Build the Crawler application using pnpm filter
+WORKDIR /app/apps/crawler
+RUN pnpm exec nest build
+
+# Set entrypoint for development mode
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-dev.sh"]
 
 # ==============================================================================
 # Stage 3: curl-impersonate - Prepare curl-impersonate binaries
@@ -71,15 +83,19 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy workspace configuration
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Copy all package.json files for workspace apps
+COPY apps/api/package.json ./apps/api/
+COPY apps/crawler/package.json ./apps/crawler/
 
 # Install production dependencies only
 RUN pnpm install --prod --frozen-lockfile && \
     pnpm store prune
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nestjs:nodejs /app/apps/crawler/dist ./dist
 
 # Copy curl-impersonate binaries from curl-impersonate stage
 COPY --from=curl-impersonate /usr/local/bin/curl-impersonate-chrome /usr/local/bin/
@@ -106,4 +122,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl-chrome --version && node -e "require('http').get('http://localhost:3001/crawl/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Start the crawler service
-CMD ["node", "dist/apps/crawler/main.js"]
+CMD ["node", "dist/main.js"]

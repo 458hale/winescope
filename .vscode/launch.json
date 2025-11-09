@@ -1,0 +1,47 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Docker: Attach to API (Debug Mode)",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "address": "localhost",
+      "restart": true,
+      "remoteRoot": "/app",
+      "localRoot": "${workspaceFolder}",
+      "skipFiles": ["<node_internals>/**"],
+      "trace": true,
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "preLaunchTask": "Docker: Start Debug Mode"
+    },
+    {
+      "name": "Local: Debug API",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "start:debug", "api"],
+      "cwd": "${workspaceFolder}/apps/api",
+      "skipFiles": ["<node_internals>/**"],
+      "sourceMaps": true,
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "name": "Docker: Attach to API (Manual)",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "address": "localhost",
+      "restart": true,
+      "remoteRoot": "/app",
+      "localRoot": "${workspaceFolder}",
+      "skipFiles": ["<node_internals>/**"],
+      "trace": true,
+      "sourceMaps": true
+    }
+  ]
+}

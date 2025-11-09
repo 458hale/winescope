@@ -7,7 +7,7 @@ export class CrawlRequest {
    * Target URL to crawl
    * @example "https://www.wine-searcher.com/find/..."
    */
-  url: string;
+  url!: string;
 
   /**
    * Browser fingerprint to use
