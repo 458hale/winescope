@@ -5,5 +5,11 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@winescope/contracts$": "<rootDir>/../../../libs/contracts/src",
+    "^@winescope/contracts/(.*)$": "<rootDir>/../../../libs/contracts/src/$1",
+    "^@winescope/common$": "<rootDir>/../../../libs/common/src",
+    "^@winescope/common/(.*)$": "<rootDir>/../../../libs/common/src/$1"
   }
 }
