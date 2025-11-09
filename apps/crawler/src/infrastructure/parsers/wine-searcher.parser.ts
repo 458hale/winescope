@@ -67,7 +67,7 @@ export class WineSearcherParser implements ParserPort {
   /**
    * Wine 엔티티를 추출합니다.
    */
-  private extractWine($: cheerio.CheerioAPI): Wine {
+  private extractWine($: cheerio.Root): Wine {
     const selectors = WINE_SEARCHER_SELECTORS.wine;
 
     const name = this.extractText($, selectors.name);
@@ -95,7 +95,7 @@ export class WineSearcherParser implements ParserPort {
   /**
    * Rating 엔티티 배열을 추출합니다.
    */
-  private extractRatings($: cheerio.CheerioAPI): Rating[] {
+  private extractRatings($: cheerio.Root): Rating[] {
     const ratings: Rating[] = [];
     const selectors = WINE_SEARCHER_SELECTORS.ratings;
 
@@ -129,7 +129,7 @@ export class WineSearcherParser implements ParserPort {
   /**
    * Price 엔티티를 추출합니다.
    */
-  private extractPrice($: cheerio.CheerioAPI): Price | null {
+  private extractPrice($: cheerio.Root): Price | null {
     const selectors = WINE_SEARCHER_SELECTORS.price;
 
     const averageText = this.extractText($, selectors.average);
@@ -151,7 +151,7 @@ export class WineSearcherParser implements ParserPort {
    * CSS 선택자로 텍스트를 추출합니다.
    */
   private extractText(
-    $: cheerio.CheerioAPI,
+    $: cheerio.Root,
     selector: string,
     context?: cheerio.Element,
   ): string | null {

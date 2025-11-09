@@ -60,7 +60,7 @@ describe('CurlCrawlerAdapter', () => {
 
       mockExec.mockImplementation((cmd: any, options, callback: any) => {
         expect(cmd).toContain('--max-time 10'); // 10000ms / 1000
-        expect(options.timeout).toBe(10000);
+        expect(options?.timeout).toBe(10000);
         callback(null, { stdout: mockHtml, stderr: '' });
         return {} as any;
       });
