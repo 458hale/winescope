@@ -18,7 +18,16 @@
     "docker:up:dev": "docker compose --profile development up",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "docker:clean": "docker compose down -v && docker rmi winescope-monorepo-api winescope-monorepo-crawler 2>/dev/null || true"
+    "docker:clean": "docker compose down -v && docker rmi winescope-monorepo-api winescope-monorepo-crawler 2>/dev/null || true",
+    "docker:debug": "docker compose --profile debug up",
+    "docker:debug:build": "docker compose --profile debug up --build",
+    "docker:shell:api": "docker exec -it winescope-api-dev sh",
+    "docker:shell:api:debug": "docker exec -it winescope-api-debug sh",
+    "docker:logs:api": "docker compose logs -f api-dev",
+    "docker:logs:api:debug": "docker compose logs -f api-debug",
+    "dev:start": "./scripts/dev-start.sh",
+    "dev:stop": "./scripts/dev-stop.sh",
+    "debug:start": "./scripts/debug-start.sh"
   },
   "devDependencies": {
     "prettier": "^3.4.2",

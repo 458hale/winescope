@@ -42,7 +42,21 @@ pnpm run docker:up:dev
 pnpm run docker:logs
 ```
 
-### 3. 컨테이너 종료
+### 3. 디버그 모드 실행 (VSCode Cursor 디버깅)
+
+```bash
+# 디버그 모드로 실행 (디버거 포트 9229 노출)
+pnpm run debug:start
+
+# VSCode Cursor에서 디버거 연결
+# 1. F5 키 누르기
+# 2. "Docker: Attach to API (Debug Mode)" 선택
+# 3. 브레이크포인트 설정 후 API 호출
+
+# 자세한 내용은 documents/docker-local-development-guide.md 참고
+```
+
+### 4. 컨테이너 종료
 
 ```bash
 # 컨테이너 종료
@@ -63,15 +77,24 @@ pnpm run docker:build:crawler      # Crawler 서비스만 빌드 (AMD64)
 # 컨테이너 실행
 pnpm run docker:up                 # 프로덕션 모드 (백그라운드)
 pnpm run docker:up:dev             # 개발 모드 (Hot Reload)
+pnpm run docker:debug              # 디버그 모드 (디버거 포트 9229)
+pnpm run docker:debug:build        # 디버그 모드 (이미지 재빌드)
+
+# 개발 환경 빠른 시작/종료
+pnpm run dev:start                 # 개발 환경 시작 (스크립트)
+pnpm run dev:stop                  # 개발 환경 종료 (스크립트)
+pnpm run debug:start               # 디버그 환경 시작 (스크립트)
 
 # 컨테이너 관리
 pnpm run docker:down               # 모든 컨테이너 종료
 pnpm run docker:logs               # 모든 서비스 로그 확인
-pnpm run docker:logs:api           # API 서비스 로그만 확인
-pnpm run docker:logs:crawler       # Crawler 서비스 로그만 확인
+pnpm run docker:logs:api           # API 개발 모드 로그
+pnpm run docker:logs:api:debug     # API 디버그 모드 로그
+pnpm run docker:logs:crawler       # Crawler 서비스 로그
 
 # 컨테이너 쉘 접속
-pnpm run docker:shell:api          # API 컨테이너 쉘 접속
+pnpm run docker:shell:api          # API 개발 모드 쉘 접속
+pnpm run docker:shell:api:debug    # API 디버그 모드 쉘 접속
 pnpm run docker:shell:crawler      # Crawler 컨테이너 쉘 접속
 
 # curl-impersonate 테스트
@@ -167,6 +190,15 @@ const result = await response.json();
 - **볼륨 마운트**: `./apps/crawler/src`, `./libs` (Hot Reload)
 - **실행 명령**: `docker compose --profile development up crawler-dev`
 
+### api-debug (디버그, ARM64)
+
+- **포트**: 3000:3000, 9229:9229 (디버거)
+- **환경**: NODE_ENV=development
+- **플랫폼**: ARM64 네이티브
+- **볼륨 마운트**: `./apps/api/src`, `./libs` (Hot Reload)
+- **디버거 지원**: ✅ VSCode Cursor 연결 가능
+- **실행 명령**: `docker compose --profile debug up api-debug`
+
 > **참고**: Docker Compose V2 문법 (`docker compose`)을 사용합니다. 구버전 `docker-compose` 명령어는 deprecated되었습니다.
 
 ## curl-impersonate 지원
@@ -256,12 +288,15 @@ curl -X POST http://localhost:3001/crawl \
 
 1. **deps**: pnpm 의존성 설치
 2. **builder**: TypeScript → JavaScript 빌드
-3. **production**: 최종 경량 이미지 (Node.js 22 Alpine)
+3. **debug**: 개발 이미지 + 디버거 지원 (포트 9229)
+4. **production**: 최종 경량 이미지 (Node.js 22 Alpine)
 
 **특징**:
+
 - ARM64 네이티브 실행 (Apple Silicon 최적화)
 - curl-impersonate 미포함 (경량화)
 - 빠른 빌드 및 실행 속도
+- **디버그 모드**: VSCode Cursor 디버거 연결 지원
 
 ### apps/crawler/Dockerfile (curl-impersonate 지원)
 
@@ -273,6 +308,7 @@ curl -X POST http://localhost:3001/crawl \
 4. **production**: 최종 이미지 + curl-impersonate (AMD64)
 
 **특징**:
+
 - 모든 stage에서 `--platform=linux/amd64` 명시
 - curl-impersonate 완전 호환
 - Apple Silicon에서 Rosetta 2 사용 (약간의 성능 오버헤드)
@@ -416,10 +452,71 @@ docker compose -f docker-compose.yml up -d
 - **Google Cloud Run**: 각 서비스를 별도 Cloud Run 서비스로 배포
 - **Fly.io**: 멀티플랫폼 자동 감지 및 배포
 
+## VSCode Cursor 디버깅
+
+### 빠른 시작
+
+```bash
+# 1. 디버그 모드 시작
+pnpm run debug:start
+
+# 2. VSCode Cursor에서 F5 누르기
+# 3. "Docker: Attach to API (Debug Mode)" 선택
+# 4. 브레이크포인트 설정 후 API 호출
+curl http://localhost:3000
+```
+
+### 디버깅 기능
+
+- ✅ **Hot Reload**: 코드 변경 시 자동 재시작
+- ✅ **브레이크포인트**: 코드 실행 중지 및 검사
+- ✅ **변수 검사**: 실시간 변수 값 확인
+- ✅ **단계별 실행**: Step Over, Step Into, Step Out
+- ✅ **Watch 표현식**: 특정 표현식 모니터링
+- ✅ **Debug Console**: 런타임 코드 실행
+
+### 자세한 가이드
+
+완전한 디버깅 가이드는 [Docker 로컬 개발 환경 완전 가이드](documents/docker-local-development-guide.md)를 참고하세요.
+
+## 환경 변수 관리
+
+### 환경 변수 파일
+
+```
+.env.example          # 템플릿 (Git 커밋됨)
+.env.development      # 로컬 개발용
+.env.docker          # Docker 개발용
+.env.production      # 프로덕션용
+```
+
+### 사용 예시
+
+```bash
+# .env.docker
+NODE_ENV=development
+PORT=3000
+CRAWLER_SERVICE_URL=http://crawler:3001
+LOG_LEVEL=debug
+```
+
+### 보안
+
+- ⚠️ `.env.*` 파일은 Git에 커밋하지 않음
+- ✅ `.env.example`만 Git에 커밋 (템플릿용)
+
 ## 참고 자료
+
+### 공식 문서
 
 - [NestJS Monorepo 공식 가이드](https://docs.nestjs.com/cli/monorepo)
 - [NestJS Docker 공식 가이드](https://docs.nestjs.com/deployment)
 - [curl-impersonate GitHub](https://github.com/lwthiker/curl-impersonate)
 - [Docker Multi-platform Build](https://docs.docker.com/build/building/multi-platform/)
-- [WineScope PRD](documents/winescope-prd.md)
+- [VSCode 디버깅 가이드](https://code.visualstudio.com/docs/editor/debugging)
+
+### 프로젝트 문서
+
+- [Docker 로컬 개발 환경 완전 가이드](documents/docker-local-development-guide.md) - **디버깅 완전 가이드**
+- [WineScope PRD](documents/winescope-prd.md) - 프로젝트 요구사항 문서
+- [CLAUDE.md](CLAUDE.md) - 프로젝트 개요 및 개발 가이드
