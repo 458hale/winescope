@@ -1,398 +1,444 @@
 # CLAUDE.md - Crawler Application
 
-This file provides guidance for working with the Crawler application in the WineScope monorepo.
+Crawler 애플리케이션 작업 시 참고할 문서입니다.
 
-## Application Overview
+## 애플리케이션 개요
 
-The Crawler application is a specialized microservice for web scraping wine data from various sources.
+Wine-Searcher 사이트에서 와인 데이터를 크롤링하고 파싱하는 NestJS 마이크로서비스입니다.
 
-- **Framework**: NestJS v10.x (Microservice)
+- **Framework**: NestJS v10.x
 - **Language**: TypeScript 5.1+
-- **Purpose**: Web crawling, data extraction, and wine information aggregation
-- **Architecture**: Microservice pattern (can run independently or alongside API)
+- **Architecture**: Hexagonal Architecture (Ports & Adapters)
+- **HTTP Client**: curl-impersonate (브라우저 핑거프린트 위장)
+- **HTML Parser**: cheerio (jQuery 기반 파서)
 
-## Project Structure
+## 프로젝트 구조
 
 ```
 apps/crawler/
 ├── src/
-│   ├── main.ts                  # Application entry point
-│   ├── crawler.module.ts        # Root module
-│   ├── crawler.controller.ts    # Crawler controller (job management)
-│   └── crawler.service.ts       # Crawler business logic
-├── test/
-│   └── crawler.e2e-spec.ts     # E2E test suite
-├── Dockerfile                   # Docker configuration for Crawler service
-└── tsconfig.app.json            # TypeScript config for this app
+│   ├── domain/                   # 비즈니스 로직 계층
+│   │   ├── entities/            # 엔티티 (Wine, Rating, Price)
+│   │   ├── value-objects/       # 값 객체 (WineName, Vintage, Score)
+│   │   ├── ports/               # 인터페이스 정의 (CrawlerPort, ParserPort)
+│   │   └── errors/              # 도메인 에러 정의
+│   ├── application/             # 애플리케이션 계층
+│   │   ├── use-cases/           # 유스케이스 (SearchWineUseCase)
+│   │   └── dto/                 # 요청/응답 DTO
+│   ├── infrastructure/          # 인프라 계층
+│   │   ├── adapters/            # 어댑터 구현 (CurlCrawlerAdapter)
+│   │   └── parsers/             # 파서 구현 (WineSearcherParser)
+│   ├── presentation/            # 프레젠테이션 계층
+│   │   ├── controllers/         # HTTP 컨트롤러
+│   │   └── filters/             # 예외 필터
+│   └── main.ts                  # 애플리케이션 진입점 (포트 3001)
+└── test/                        # E2E 테스트
 ```
 
-## Development Commands
+## 개발 명령어
 
-All commands should be run from the **monorepo root** directory.
+**모노레포 루트**에서 실행해야 합니다.
 
-### Running the Crawler App
+### 실행
 
 ```bash
-# Development mode with watch (from root)
+# 개발 모드 (watch)
 pnpm run start:dev crawler
 
-# Debug mode with watch
+# 디버그 모드
 pnpm run start:debug crawler
 
-# Production build
+# 프로덕션 빌드
 pnpm run build crawler
-
-# Run production build
 pnpm run start:prod crawler
 ```
 
-### Testing
+### 테스트
 
 ```bash
-# Unit tests for Crawler app
-pnpm run test crawler
+# 단위 테스트
+pnpm --filter @winescope/crawler run test
 
-# Unit tests in watch mode
-pnpm run test:watch crawler
+# 단위 테스트 (watch)
+pnpm --filter @winescope/crawler run test:watch
 
-# E2E tests
-pnpm run test:e2e crawler
+# E2E 테스트
+pnpm --filter @winescope/crawler run test:e2e
 
-# Test coverage
-pnpm run test:cov crawler
+# 커버리지
+pnpm --filter @winescope/crawler run test:cov
 ```
 
-## Docker
+### 코드 품질
 
 ```bash
-# Build Crawler service image
-docker compose build crawler
+# ESLint
+pnpm --filter @winescope/crawler run lint
 
-# Run Crawler service only
-docker compose up crawler
-
-# Run Crawler with dependencies
-docker compose up crawler rabbitmq redis
+# 빌드 확인
+pnpm --filter @winescope/crawler run build
 ```
 
-## Architecture
+## Hexagonal Architecture
 
-### Microservice Pattern
-
-The Crawler app is designed as an independent microservice that can:
-
-- Run as a standalone service
-- Communicate with the API service via message queue (RabbitMQ/Redis)
-- Process crawling jobs asynchronously
-- Store results in shared database or message queue
-
-### Module Organization
+### 계층 구조
 
 ```
-src/
-├── crawlers/              # Different crawler implementations
-│   ├── vivino.crawler.ts
-│   ├── wine-searcher.crawler.ts
-│   └── base.crawler.ts   # Abstract base crawler
-├── parsers/              # HTML/Data parsers
-│   ├── wine-parser.ts
-│   └── review-parser.ts
-├── queues/               # Job queue management
-│   └── crawler-queue.ts
-└── storage/              # Data storage adapters
-    └── wine-storage.ts
+Presentation → Application → Domain ← Infrastructure
+(HTTP API)    (Use Cases)    (Core)    (Adapters)
 ```
 
-### Crawler Interface
+### 의존성 방향
 
-Define a consistent interface for all crawlers:
+- **Domain**: 외부 의존성 없음 (순수 비즈니스 로직)
+- **Application**: Domain에만 의존
+- **Infrastructure**: Domain의 Port 인터페이스 구현
+- **Presentation**: Application 계층 사용
 
+### Port Interface 패턴
+
+**CrawlerPort** ([domain/ports/crawler.port.ts](src/domain/ports/crawler.port.ts:34)):
 ```typescript
-export interface Crawler {
-  crawl(url: string): Promise<CrawlResult>;
-  parse(html: string): Promise<WineData>;
-  validate(data: WineData): boolean;
-}
-
-export abstract class BaseCrawler implements Crawler {
-  abstract crawl(url: string): Promise<CrawlResult>;
-  abstract parse(html: string): Promise<WineData>;
-
-  validate(data: WineData): boolean {
-    // Common validation logic
-    return !!data.name && !!data.vintage;
-  }
+export interface CrawlerPort {
+  fetch(url: string, options?: CrawlOptions): Promise<string>;
 }
 ```
 
-## Crawler Implementation
+**ParserPort** ([domain/ports/parser.port.ts](src/domain/ports/parser.port.ts)):
+```typescript
+export interface ParserPort {
+  parse(html: string, sourceUrl: string): Promise<WineData>;
+}
+```
 
-### Basic Crawler Example
+**구현체**:
+- [CurlCrawlerAdapter](src/infrastructure/adapters/curl-crawler.adapter.ts:16) - CrawlerPort 구현
+- [WineSearcherParser](src/infrastructure/parsers/wine-searcher.parser.ts:20) - ParserPort 구현
+
+## 핵심 도메인 모델
+
+### Wine Entity
+
+와인 정보를 나타내는 Aggregate Root ([domain/entities/wine.entity.ts](src/domain/entities/wine.entity.ts:10))
 
 ```typescript
-@Injectable()
-export class VivinoCrawler extends BaseCrawler {
+class Wine {
   constructor(
-    private readonly httpService: HttpService,
-    private readonly parserService: ParserService,
-  ) {
-    super();
-  }
-
-  async crawl(url: string): Promise<CrawlResult> {
-    try {
-      const response = await this.httpService.get(url).toPromise();
-      const wineData = await this.parse(response.data);
-
-      if (this.validate(wineData)) {
-        return { success: true, data: wineData };
-      }
-
-      return { success: false, error: 'Invalid data' };
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  async parse(html: string): Promise<WineData> {
-    // Implementation specific to Vivino structure
-    const $ = cheerio.load(html);
-
-    return {
-      name: $('.wine-name').text().trim(),
-      vintage: parseInt($('.wine-vintage').text()),
-      rating: parseFloat($('.wine-rating').text()),
-      price: parseFloat($('.wine-price').text()),
-    };
-  }
+    public readonly name: WineName,      // 와인 이름 (VO)
+    public readonly region: string,      // 생산 지역
+    public readonly winery: string,      // 와이너리
+    public readonly variety: string,     // 품종
+    public readonly vintage: Vintage,    // 빈티지 (VO)
+  )
 }
 ```
 
-### Queue-Based Processing
+### Value Objects
+
+불변 객체로 비즈니스 규칙 캡슐화:
+
+- **WineName** ([domain/value-objects/wine-name.vo.ts](src/domain/value-objects/wine-name.vo.ts)): 1-200자, 빈 값 불가
+- **Vintage** ([domain/value-objects/vintage.vo.ts](src/domain/value-objects/vintage.vo.ts)): 1900-현재 연도
+- **Score** ([domain/value-objects/score.vo.ts](src/domain/value-objects/score.vo.ts)): 0-100점
+
+### Rating & Price Entities
+
+- **Rating** ([domain/entities/rating.entity.ts](src/domain/entities/rating.entity.ts)): 평점 정보 (출처, 점수, 평론가, 리뷰 수)
+- **Price** ([domain/entities/price.entity.ts](src/domain/entities/price.entity.ts)): 가격 정보 (평균가, 통화, 범위, 갱신일)
+
+## 데이터 흐름
+
+### 1. HTTP 요청 수신
+
+[WineController](src/presentation/controllers/wine.controller.ts:14) → `POST /wine/search`
 
 ```typescript
-@Injectable()
-export class CrawlerQueue {
-  constructor(
-    @InjectQueue('crawler') private crawlerQueue: Queue,
-  ) {}
-
-  async addCrawlJob(url: string, options?: CrawlOptions) {
-    return this.crawlerQueue.add('crawl', {
-      url,
-      options,
-      timestamp: new Date(),
-    });
-  }
-
-  @Process('crawl')
-  async processCrawlJob(job: Job<CrawlJobData>) {
-    const { url, options } = job.data;
-    const crawler = this.getCrawlerForUrl(url);
-    const result = await crawler.crawl(url);
-
-    if (result.success) {
-      await this.storageService.save(result.data);
-    }
-
-    return result;
-  }
-}
+@Post('search')
+async search(@Body() request: WineSearchRequestDto): Promise<WineSearchResponseDto>
 ```
 
-## Best Practices
+### 2. Use Case 실행
 
-### Rate Limiting
-
-Always implement rate limiting to avoid being blocked:
+[SearchWineUseCase.execute()](src/application/use-cases/search-wine.use-case.ts:28)
 
 ```typescript
-@Injectable()
-export class RateLimiter {
-  private lastRequest = new Map<string, number>();
-  private readonly minInterval = 1000; // 1 second between requests
+async execute(request: WineSearchRequestDto): Promise<WineSearchResponseDto> {
+  // 1. Wine-Searcher URL 생성
+  const url = this.constructWineSearcherUrl(request);
 
-  async throttle(domain: string): Promise<void> {
-    const lastTime = this.lastRequest.get(domain) || 0;
-    const elapsed = Date.now() - lastTime;
+  // 2. HTML 크롤링 (CrawlerPort)
+  const html = await this.crawler.fetch(url, { browser: 'chrome116' });
 
-    if (elapsed < this.minInterval) {
-      await this.sleep(this.minInterval - elapsed);
-    }
+  // 3. 데이터 파싱 (ParserPort)
+  const wineData = await this.parser.parse(html, url);
 
-    this.lastRequest.set(domain, Date.now());
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
+  // 4. DTO 변환
+  return this.mapToResponseDto(wineData);
 }
 ```
 
-### Error Handling
+### 3. HTTP 크롤링
 
-```typescript
-@Injectable()
-export class CrawlerService {
-  private readonly maxRetries = 3;
-
-  async crawlWithRetry(url: string, retries = 0): Promise<CrawlResult> {
-    try {
-      return await this.crawler.crawl(url);
-    } catch (error) {
-      if (retries < this.maxRetries) {
-        await this.sleep(Math.pow(2, retries) * 1000); // Exponential backoff
-        return this.crawlWithRetry(url, retries + 1);
-      }
-
-      throw new Error(`Failed after ${this.maxRetries} retries: ${error.message}`);
-    }
-  }
-}
-```
-
-### User Agent Rotation
-
-```typescript
-const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36',
-];
-
-@Injectable()
-export class HttpClientService {
-  getRandomUserAgent(): string {
-    return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-  }
-
-  async fetch(url: string): Promise<string> {
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': this.getRandomUserAgent(),
-      },
-    });
-    return response.data;
-  }
-}
-```
-
-## Data Validation
-
-### DTO Validation
-
-```typescript
-import { IsString, IsNotEmpty, IsNumber, Min, Max } from 'class-validator';
-
-export class WineDataDto {
-  @IsString()
-  @IsNotEmpty()
-  name: string;
-
-  @IsNumber()
-  @Min(1900)
-  @Max(new Date().getFullYear())
-  vintage: number;
-
-  @IsNumber()
-  @Min(0)
-  @Max(5)
-  rating?: number;
-
-  @IsNumber()
-  @Min(0)
-  price?: number;
-}
-```
-
-## Environment Variables
+[CurlCrawlerAdapter.fetch()](src/infrastructure/adapters/curl-crawler.adapter.ts:28)
 
 ```bash
-# Crawler Configuration
-CRAWLER_CONCURRENCY=5        # Max concurrent crawl jobs
-CRAWLER_TIMEOUT=30000        # Request timeout (ms)
-CRAWLER_RETRY_LIMIT=3        # Max retry attempts
-
-# Rate Limiting
-CRAWLER_RATE_LIMIT=1000      # Min interval between requests (ms)
-
-# Queue Configuration (if using Bull/BullMQ)
-REDIS_HOST=localhost
-REDIS_PORT=6379
-QUEUE_NAME=crawler
-
-# Proxy Configuration (optional)
-PROXY_HOST=
-PROXY_PORT=
+# curl-impersonate 실행 예시
+curl_chrome116 -s -L "https://www.wine-searcher.com/find/..." \
+  --max-time 5
 ```
 
-## Common Libraries
+### 4. HTML 파싱
 
-### Web Scraping
-
-- **axios**: HTTP client for making requests
-- **cheerio**: jQuery-like HTML parsing
-- **puppeteer**: Headless browser for dynamic content
-- **playwright**: Modern browser automation
-
-### Queue Management
-
-- **@nestjs/bull**: Bull queue integration for NestJS
-- **bullmq**: Modern Redis-based queue
-
-### Data Processing
-
-- **class-validator**: DTO validation
-- **class-transformer**: Object transformation
-
-## Testing
-
-### Mock HTTP Requests
+[WineSearcherParser.parse()](src/infrastructure/parsers/wine-searcher.parser.ts:31)
 
 ```typescript
-describe('VivinoCrawler', () => {
-  let crawler: VivinoCrawler;
-  let httpService: HttpService;
+async parse(html: string, sourceUrl: string): Promise<WineData> {
+  const $ = cheerio.load(html);
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        VivinoCrawler,
-        {
-          provide: HttpService,
-          useValue: {
-            get: jest.fn(),
-          },
-        },
-      ],
-    }).compile();
+  const wine = this.extractWine($);        // Wine 엔티티
+  const ratings = this.extractRatings($);  // Rating 배열
+  const price = this.extractPrice($);      // Price 엔티티
 
-    crawler = module.get<VivinoCrawler>(VivinoCrawler);
-    httpService = module.get<HttpService>(HttpService);
-  });
+  return { wine, ratings, price, sourceUrl, crawledAt: new Date() };
+}
+```
 
-  it('should parse wine data correctly', async () => {
-    const mockHtml = '<div class="wine-name">Test Wine</div>';
-    jest.spyOn(httpService, 'get').mockReturnValue(of({ data: mockHtml }));
+## curl-impersonate 사용
 
-    const result = await crawler.crawl('https://example.com');
+### 브라우저 핑거프린트 위장
 
-    expect(result.success).toBe(true);
-    expect(result.data.name).toBe('Test Wine');
-  });
+일반 curl은 봇으로 감지되므로 curl-impersonate 사용:
+
+```bash
+# 지원 브라우저
+curl_chrome116   # Chrome 116 (기본값)
+curl_chrome110   # Chrome 110
+curl_firefox109  # Firefox 109
+```
+
+### CrawlOptions
+
+```typescript
+interface CrawlOptions {
+  browser?: 'chrome116' | 'chrome110' | 'firefox109';
+  timeout?: number;                    // 기본값: 5000ms
+  headers?: Record<string, string>;
+  userAgent?: string;
+}
+```
+
+### 보안 고려사항
+
+[escapeShellArg()](src/infrastructure/adapters/curl-crawler.adapter.ts:122) - Command Injection 방지
+
+```typescript
+private escapeShellArg(arg: string): string {
+  return arg
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\$/g, '\\$')
+    // ... 특수문자 이스케이프
+}
+```
+
+## 예외 처리
+
+### 도메인 에러
+
+[domain/errors/crawler.errors.ts](src/domain/errors/crawler.errors.ts)
+
+- **NetworkError**: 네트워크 오류
+- **TimeoutError**: 타임아웃
+- **ParsingError**: HTML 파싱 실패
+
+### 예외 필터
+
+[CrawlerExceptionFilter](src/presentation/filters/crawler-exception.filter.ts) - 도메인 에러를 HTTP 응답으로 변환
+
+```typescript
+NetworkError  → 502 Bad Gateway
+TimeoutError  → 504 Gateway Timeout
+ParsingError  → 500 Internal Server Error
+```
+
+## 테스트 전략
+
+### 단위 테스트
+
+각 계층별 독립적 테스트:
+
+- **Domain**: 엔티티, VO 비즈니스 규칙 검증
+- **Application**: Use Case 로직 검증 (Port mock)
+- **Infrastructure**: Adapter 구현 검증
+
+### E2E 테스트
+
+[test/wine.e2e-spec.ts](test/wine.e2e-spec.ts) - 실제 HTTP 요청 시뮬레이션
+
+```typescript
+it('POST /wine/search - 와인 검색 성공', async () => {
+  const response = await request(app.getHttpServer())
+    .post('/wine/search')
+    .send({
+      winery: 'Opus One',
+      variety: 'Cabernet Sauvignon',
+      vintage: 2018,
+      region: 'Napa Valley',
+    })
+    .expect(201);
+
+  expect(response.body).toHaveProperty('wine');
+  expect(response.body).toHaveProperty('ratings');
 });
 ```
 
-## Legal and Ethical Considerations
+### Test Doubles
 
-- **Respect robots.txt**: Always check and follow robots.txt rules
-- **Rate limiting**: Don't overwhelm target servers
-- **Terms of Service**: Review and comply with website ToS
-- **Data privacy**: Handle scraped data responsibly
-- **Copyright**: Respect intellectual property rights
+- **Mock**: Port 인터페이스 (CrawlerPort, ParserPort)
+- **Stub**: 고정 HTML 응답
+- **Spy**: 메서드 호출 검증
 
-## Related Documentation
+## Wine-Searcher URL 패턴
 
-- Root [CLAUDE.md](../../CLAUDE.md) - Monorepo guidelines
-- [DOCKER.md](../../DOCKER.md) - Docker setup and deployment
-- API app [CLAUDE.md](../api/CLAUDE.md) - API service documentation
+### URL 생성 규칙
+
+[constructWineSearcherUrl()](src/application/use-cases/search-wine.use-case.ts:65)
+
+```
+Pattern: /find/{winery}+{variety}+{vintage}+{region}
+
+Input:  { winery: 'Opus One', variety: 'Cabernet', vintage: 2018, region: 'Napa' }
+Output: https://www.wine-searcher.com/find/opus+one+cabernet+2018+napa
+```
+
+### 정규화 규칙
+
+- 소문자 변환
+- 공백 → `+`
+- 특수문자 제거 (a-z, 0-9, + 만 허용)
+
+## CSS 선택자 관리
+
+[wine-searcher.selectors.ts](src/infrastructure/parsers/wine-searcher.selectors.ts) - CSS 선택자 중앙 관리
+
+```typescript
+export const WINE_SEARCHER_SELECTORS = {
+  wine: {
+    name: '.wine-name-selector',
+    vintage: '.wine-vintage',
+    region: '.wine-region',
+    winery: '.winery-name',
+    variety: '.wine-variety',
+  },
+  ratings: {
+    container: '.ratings-section',
+    item: '.rating-item',
+    source: '.rating-source',
+    score: '.rating-score',
+  },
+  // ...
+};
+```
+
+**선택자 변경 시**: 이 파일만 수정하면 됨
+
+## 의존성 주입
+
+### Provider 등록
+
+[wine.module.ts](src/presentation/wine.module.ts)
+
+```typescript
+@Module({
+  providers: [
+    SearchWineUseCase,
+    { provide: 'CrawlerPort', useClass: CurlCrawlerAdapter },
+    { provide: 'ParserPort', useClass: WineSearcherParser },
+  ],
+})
+```
+
+### 주입 방식
+
+```typescript
+@Injectable()
+export class SearchWineUseCase {
+  constructor(
+    @Inject('CrawlerPort') private readonly crawler: CrawlerPort,
+    @Inject('ParserPort') private readonly parser: ParserPort,
+  ) {}
+}
+```
+
+## 환경 변수
+
+```bash
+# 애플리케이션 포트
+PORT=3001
+
+# 크롤링 설정
+CRAWLER_TIMEOUT=5000           # 타임아웃 (ms)
+CRAWLER_BROWSER=chrome116      # 브라우저 프로필
+
+# 로깅
+LOG_LEVEL=debug
+```
+
+## 베스트 프랙티스
+
+### 1. Port 인터페이스 우선
+
+새 기능 추가 시:
+1. Domain에 Port 인터페이스 정의
+2. Infrastructure에 구현체 작성
+3. Application에서 Port 사용
+
+### 2. Value Object 활용
+
+검증 로직이 있는 값은 VO로 캡슐화:
+
+```typescript
+// ❌ Bad
+if (vintage < 1900 || vintage > new Date().getFullYear()) {
+  throw new Error('Invalid vintage');
+}
+
+// ✅ Good
+const vintage = Vintage.create(vintageValue); // VO 내부 검증
+```
+
+### 3. 도메인 에러 사용
+
+도메인 의미를 담은 에러 클래스:
+
+```typescript
+// ❌ Bad
+throw new Error('Network error');
+
+// ✅ Good
+throw new NetworkError('Failed to fetch URL', url);
+```
+
+### 4. CSS 선택자 중앙화
+
+선택자는 `wine-searcher.selectors.ts`에서만 관리
+
+## 제약사항
+
+### 법적/윤리적 고려
+
+- Wine-Searcher 이용약관 준수
+- robots.txt 확인 필요
+- Rate limiting 구현 권장
+- 개인정보 처리 주의
+
+### 기술적 제한
+
+- curl-impersonate 설치 필요 (로컬/Docker)
+- SSR HTML만 파싱 가능 (JavaScript 렌더링 불가)
+- Wine-Searcher HTML 구조 변경 시 선택자 수정 필요
+
+## 관련 문서
+
+- Root [CLAUDE.md](../../CLAUDE.md) - 모노레포 가이드라인
+- API [CLAUDE.md](../api/CLAUDE.md) - API 서비스 문서
